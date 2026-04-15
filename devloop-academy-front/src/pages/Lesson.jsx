@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 export default function Lesson() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   
   const [content, setContent] = useState('');
   const [lessonData, setLessonData] = useState(null);
@@ -14,13 +15,16 @@ export default function Lesson() {
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    if (!user) navigate('/login');
-        }, [user, navigate]);
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
-        // Ya no necesitas el estado 'loading' ni la petición a Supabase en este archivo.
-        
-        if (!profile) return null; // Prevenir render antes de redirección
-      }
+    const fetchFullLesson = async () => {
+      if (!profile) return;
+
+      // 1. Determinar si el usuario tiene acceso a esta lección
+      const activeStatus = profile?.active_lessons?.includes(id) || false;
       setIsActive(activeStatus);
 
       // 2. Traer info de la lección desde Supabase
@@ -53,7 +57,7 @@ export default function Lesson() {
     };
 
     fetchFullLesson();
-  }, [id, navigate]);
+  }, [id, navigate, user, profile]);
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
