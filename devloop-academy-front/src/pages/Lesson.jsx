@@ -15,16 +15,12 @@ export default function Lesson() {
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
     const fetchFullLesson = async () => {
-      if (!profile) return;
+      setLoading(true);
 
       // 1. Determinar si el usuario tiene acceso a esta lección
-      const activeStatus = profile?.active_lessons?.includes(id) || false;
+      // Si el perfil no existe (ej. usuario sin cuenta), evalúa como 'false' sin romper el código.
+      const activeStatus = profile?.is_active || false;
       setIsActive(activeStatus);
 
       // 2. Traer info de la lección desde Supabase
@@ -46,18 +42,33 @@ export default function Lesson() {
       // 3. Cargar el archivo Markdown correspondiente
       try {
         const fileToFetch = activeStatus ? id : 'preview-general';
-        const response = await fetch(`${import.meta.env.BASE_URL}lessons/${fileToFetch}.md`);
+        let response = await fetch(`${import.meta.env.BASE_URL}lessons/${fileToFetch}.md`);
+        
+        // Si el archivo no existe (404) o el servidor responde con un HTML por error
+        if (!response.ok || response.headers.get('content-type')?.includes('text/html')) {
+          // Forzamos la carga de nuestro archivo de emergencia
+          response = await fetch(`${import.meta.env.BASE_URL}lessons/not-found.md`);
+        }
+
         const text = await response.text();
-        setContent(text);
+        
+        // Última barrera de seguridad: si hasta el archivo de emergencia falla
+        if (text.startsWith('<!DOCTYPE html>')) {
+          setContent("# 🚧 Error\nNo se encontró el contenido de la lección.");
+        } else {
+          setContent(text);
+        }
+
       } catch (err) {
-        setContent("# Error\nNo se pudo cargar el texto de la lección.");
+        // Si el internet falla por completo
+        setContent("# 📡 Error de conexión\nRevisa tu internet y vuelve a intentarlo.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchFullLesson();
-  }, [id, navigate, user, profile]);
+  }, [id, profile]); // Solo dependemos del ID y del perfil ahora
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
