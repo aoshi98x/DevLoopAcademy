@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #ffffff;
+  --text: #adadad;
+  --text-h: #eaeaea;
+  --bg: #16171d;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
   --accent: #aa3bff;

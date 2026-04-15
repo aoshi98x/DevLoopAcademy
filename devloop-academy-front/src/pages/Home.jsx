@@ -1,30 +1,41 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
-  // Añadimos imágenes de demostración a nuestros datos
-  const courses = [
-    {
-      id: "multiplayer-unity",
-      title: "Desarrollo Multijugador con Unity",
-      description: "Aprende a implementar Netcode, crear lobbies con temporizadores y sincronizar estados en tiempo real.",
-      level: "Avanzado",
-      image: "https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&w=600&q=80"
-    },
-    {
-      id: "animacion-2d",
-      title: "Animación Cuadro por Cuadro",
-      description: "Domina el movimiento de personajes, expresiones y poses dinámicas para darle vida a tus creaciones.",
-      level: "Intermedio",
-      image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
-    },
-    {
-      id: "ilustracion-libre",
-      title: "Ilustración con Software Libre",
-      description: "Crea arte digital increíble utilizando las mejores herramientas open-source como Krita, Inkscape y Gimp.",
-      level: "Principiante",
-      image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=600&q=80"
-    }
-  ];
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 1. Envolvemos todo en useEffect
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+
+      console.log("Respuesta de Supabase:", data, "Error:", error);
+
+      if (error) {
+        console.error("Error cargando cursos:", error);
+      } else {
+        setCourses(data);
+      }
+      setLoading(false);
+    };
+
+    // 2. ¡MUY IMPORTANTE! Llamamos a la función para que se ejecute
+    fetchCourses();
+  }, []); // 3. El array vacío [] le dice a React: "Ejecuta esto SOLO UNA VEZ al abrir la página"
+
+  // 4. (Opcional pero recomendado) Mostramos un estado de carga
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-16 py-8">
@@ -47,54 +58,51 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. Sección de Cursos Destacados */}
-      <section>
-        <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-          Rutas de Aprendizaje
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {courses.map(course => (
-            // Agregamos overflow-hidden y quitamos p-6 de este contenedor
+      {/* Grid de Cursos Dinámicos */}
+      <section className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {courses.map((course) => (
             <div 
               key={course.id} 
-              className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden"
+              className="group bg-black/60 backdrop-blur-md rounded-2xl border border-gray-800 overflow-hidden hover:border-blue-500/50 transition-all duration-300 shadow-2xl"
             >
-              {/* Espacio para la imagen */}
-              <div className="h-48 w-full bg-gray-200">
+              {/* Imagen del Curso */}
+              <div className="aspect-video w-full overflow-hidden bg-gray-900">
                 <img 
-                  src={course.image} 
-                  alt={course.title} 
-                  className="w-full h-full object-cover" 
+                  src={course.image_url || 'https://via.placeholder.com/400x225'} 
+                  alt={course.title}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
 
-              {/* Contenedor del texto (Aquí movemos el p-6) */}
-              <div className="p-6 flex flex-col flex-grow">
-                <div className="mb-4">
-                  <span className="inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-semibold">
-                    {course.level}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{course.title}</h3>
-                <p className="text-gray-600 mb-6 flex-grow">
+              {/* Contenido de la Tarjeta */}
+              <div className="p-6 space-y-4">
+                <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
+                  {course.title}
+                </h3>
+                <p className="text-gray-400 text-sm line-clamp-2">
                   {course.description}
                 </p>
                 
-                {/* Enlace con mt-auto para alinearse al fondo, o mt-8 si preferiste margen fijo */}
-                <Link 
-                  to={`/lesson/${course.id}`} 
-                  className="text-blue-600 font-semibold hover:text-blue-800 transition-colors mt-auto inline-flex items-center pt-4"
-                >
-                  Ver temario <span className="ml-2">&rarr;</span>
-                </Link>
+                <div className="pt-4 flex items-center justify-between">
+                  <Link 
+                    to={`/lesson/${course.id}`}
+                    className="text-blue-400 font-semibold text-sm hover:text-blue-300 flex items-center gap-2"
+                  >
+                    Ver temario
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-900 px-2 py-1 rounded">
+                    Online
+                  </span>
+                </div>
               </div>
-
             </div>
           ))}
         </div>
       </section>
-
     </div>
   );
 }
