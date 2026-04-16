@@ -85,8 +85,7 @@ export default function Home() {
                 </p>
                 
                 <div className="pt-4 flex items-center justify-between">
-                  <Link 
-                    to={`/lesson/${course.id}`}
+                   <Link to={`/course/${course.id}`}
                     className="text-blue-400 font-semibold text-sm hover:text-blue-300 flex items-center gap-2"
                   >
                     Ver temario
