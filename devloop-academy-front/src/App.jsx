@@ -1,8 +1,8 @@
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 // Importamos nuestros componentes y páginas
 import Navbar from './components/Navbar';
-import AdminRoute from './components/AdminRoute'; // <-- 1. IMPORTANTE: Importar el guardia
+import AdminRoute from './components/AdminRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -11,31 +11,37 @@ import EditProfile from './pages/EditProfile';
 import CourseSyllabus from './pages/CourseSyllabus';
 import CourseMenu from './pages/CourseMenu';
 import AdminPanel from './pages/AdminPanel';
+import Mentors from './pages/Mentors';
+import FloatingButton from './components/FloatingButton';
 
-export default function App() {
+// 1. Creamos un componente interno que gestione el contenido
+// Este componente SÍ puede usar useLocation porque estará envuelto por el Router
+function AppContent() {
+  const location = useLocation();
+
   return (
-    <Router>
-      {/* El Navbar está fuera de Routes para que se vea en todas las páginas */}
+    <>
+      {/* El Navbar se mantiene global */}
       <Navbar />
-
-      {/* Contenedor principal. 
-        Nota: He quitado 'container mx-auto' de aquí porque algunas 
-        páginas (como el Syllabus o la Lesson) se ven mejor con su propio ancho.
-      */}
-      <main className="min-h-[calc(100-64px)]"> 
+      
+      {/* Lógica del botón flotante corregida */}
+      {location.pathname === '/' && <FloatingButton />}
+      
+      <main className="min-h-[calc(100vh-64px)]"> 
         <Routes>
           {/* Rutas Públicas */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/mentors" element={<Mentors />} />
           
-          {/* Rutas de Estudiante (Privadas por lógica interna de cada página) */}
+          {/* Rutas de Estudiante */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/course/:id" element={<CourseSyllabus />} />
           <Route path="/course/:id/menu" element={<CourseMenu />} />
           <Route path="/lesson/:id" element={<Lesson />} />
 
-          {/* Rutas de Administrador (Protegidas por el componente AdminRoute) */}
+          {/* Rutas de Administrador */}
           <Route 
             path="/admin" 
             element={
@@ -46,6 +52,15 @@ export default function App() {
           />
         </Routes>
       </main>
+    </>
+  );
+}
+
+// 2. El componente principal App solo define el Router
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

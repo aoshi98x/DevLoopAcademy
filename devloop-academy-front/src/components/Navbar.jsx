@@ -36,7 +36,7 @@ export default function Navbar() {
                   <li>
                     <Link 
                       to="/admin" 
-                      className="text-red-400 bg-red-900/20 border border-red-900/30 px-3 py-1 rounded-md text-xs font-bold hover:bg-red-900/40 transition-all uppercase tracking-wider"
+                      className="text-black/80 bg-cyan-200/60 border border-blue-900 px-5 py-1 rounded-md text-xs font-bold hover:bg-blue-900/10 transition-all uppercase tracking-wider"
                     >
                       Admin Panel
                     </Link>
@@ -48,7 +48,7 @@ export default function Navbar() {
                 <li>
                   <button 
                     onClick={handleLogout}
-                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                    className="text-red-400 bg-red-900/20 border border-red-900/30 px-3 py-1 rounded-md text-xs font-bold hover:bg-red-900/40 transition-all uppercase tracking-wider"
                   >
                     Salir
                   </button>
@@ -56,7 +56,7 @@ export default function Navbar() {
               </>
             ) : (
               <li>
-                <Link to="/login" className="bg-blue-600 px-5 py-2 rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20 text-sm">
+                <Link to="/login" className="text-green-400 bg-green-900/20 border border-green-900/30 px-3 py-1 rounded-md text-xs font-bold hover:bg-green-900/40 transition-all uppercase tracking-wider">
                   Acceso
                 </Link>
               </li>

@@ -19,7 +19,6 @@ export default function CourseSyllabus() {
     const fetchSyllabus = async () => {
       setLoading(true);
 
-      // 1. Traer la info del curso
       const { data: courseData, error } = await supabase
         .from('courses')
         .select('*')
@@ -34,7 +33,6 @@ export default function CourseSyllabus() {
       
       setCourse(courseData);
 
-      // 2. Traer el Markdown del temario
       try {
         if (!courseData.syllabus_url) throw new Error("Sin temario configurado");
         const response = await fetch(courseData.syllabus_url);
@@ -57,7 +55,7 @@ export default function CourseSyllabus() {
     </div>
   );
 
- return (
+  return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       {/* Cabecera del Curso (Banner) */}
       <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 overflow-hidden shadow-2xl mb-8">
@@ -77,13 +75,12 @@ export default function CourseSyllabus() {
           </div>
         </div>
 
-        {/* Barra de Acción Rápida */}
         <div className="bg-gray-900/50 border-t border-gray-800 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-blue-400 text-sm sm:text-base">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
-            <span className="font-medium">Temario completo disponible</span>
+            <span className="font-medium text-left">Temario completo disponible</span>
           </div>
           
           {isActive ? (
@@ -105,12 +102,12 @@ export default function CourseSyllabus() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        {/* VIDEO DE INTRODUCCIÓN (Si existe) */}
+        {/* VIDEO DE INTRODUCCIÓN */}
         {course?.video_id && (
           <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-gray-800 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <div className="p-4 border-b border-gray-800 flex flex-row items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-              <span className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-widest">Introducción al curso</span>
+              <span className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-widest text-left">Introducción al curso</span>
             </div>
             <div className="aspect-video w-full bg-gray-900">
               <iframe 
@@ -124,12 +121,17 @@ export default function CourseSyllabus() {
         )}
 
         {/* CONTENIDO DEL TEMARIO (MARKDOWN) */}
-        <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 p-6 md:p-8 lg:p-12 shadow-2xl">
-          <div className="overflow-x-auto">
-            <div className="prose prose-sm sm:prose lg:prose-lg prose-invert max-w-none break-words 
-              prose-headings:text-blue-400 
+        <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 p-6 sm:p-8 md:p-12 shadow-2xl text-left">
+          <div className="w-full overflow-hidden">
+            <div className="prose prose-sm sm:prose lg:prose-lg prose-invert max-w-none 
+              text-left items-start flex flex-col
+              text-white
+              prose-p:text-white prose-p:text-left prose-p:w-full
+              prose-li:text-white prose-li:text-left
+              prose-headings:text-blue-400 prose-headings:text-left prose-headings:w-full
               prose-strong:text-purple-400
               prose-a:text-blue-400 hover:prose-a:text-blue-300
+              prose-ol:pl-5 prose-ul:pl-5
             ">
               <ReactMarkdown
                 components={{
