@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         {/* Usamos un div simple si no tienes el componente LoadingSpinner creado */}
         {!loading ? children : (
           <div className="min-h-screen bg-black flex items-center justify-center text-blue-500 font-bold">
-            Cargando BlendTech Hub...
+            Cargando DevLoopAcademy...
           </div>
         )}
     </AuthContext.Provider>
