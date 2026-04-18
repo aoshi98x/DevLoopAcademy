@@ -7,7 +7,7 @@ const MENTORS = [
     role: "Digital Artist & Co-founder",
     description: "Especialista en flujos de trabajo 3D con herramientas de vanguardia.",
     tags: ["Blender", "Unity", "Modelado", "Riggin", "Animación", "Texturizado"],
-    image: "src/assets/images/mentor1.jpg" // Aquí irá tu foto
+    image: "https://yrqewcxcaoqxvmjzpmth.supabase.co/storage/v1/object/public/images/mentor1.jpg" // Aquí irá tu foto
   },
   {
     id: 2,
@@ -15,7 +15,7 @@ const MENTORS = [
     role: "Desarrollador de Videojuegos & Co-Founder",
     description: "Especialista en desarrollo y Gestión de proyectos de videojuegos.",
     tags: ["Unity", "Unreal Engine", "Godot", "C#", "C++", "Gestión de Proyectos"],
-    image: "src/assets/images/mentor2.jpg" // Aquí irá tu foto
+    image: "https://yrqewcxcaoqxvmjzpmth.supabase.co/storage/v1/object/public/images/mentor2.jpg" // Aquí irá tu foto
   },
   // Puedes añadir más mentores aquí siguiendo el mismo formato
 ];

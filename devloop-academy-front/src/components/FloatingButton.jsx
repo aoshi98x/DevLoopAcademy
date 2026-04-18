@@ -4,7 +4,7 @@ export default function FloatingButton() {
   return (
     <Link 
       to="/mentors" 
-      className="fixed bottom-6 left-6 z-[60] flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-2xl shadow-blue-900/40 transition-all hover:scale-110 active:scale-95 group"
+      className="fixed bottom-6 left-6 z-[60] flex items-center justify-center bg-green-600/45 hover:bg-green-500 text-white p-4 rounded-full shadow-2xl shadow-green-900/40 transition-all hover:scale-110 active:scale-95 group"
     >
       {/* Icono de Birrete Académico */}
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
