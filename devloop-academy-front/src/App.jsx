@@ -11,7 +11,9 @@ import EditProfile from './pages/EditProfile';
 import CourseSyllabus from './pages/CourseSyllabus';
 import CourseMenu from './pages/CourseMenu';
 import AdminPanel from './pages/AdminPanel';
+import TeacherPanel from './pages/TeacherPanel';
 import Mentors from './pages/Mentors';
+import ResetPassword from './pages/ResetPassword';
 import FloatingButton from './components/FloatingButton';
 
 // 1. Creamos un componente interno que gestione el contenido
@@ -33,6 +35,7 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/mentors" element={<Mentors />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Rutas de Estudiante */}
           <Route path="/dashboard" element={<Dashboard />} />
@@ -40,6 +43,8 @@ function AppContent() {
           <Route path="/course/:id" element={<CourseSyllabus />} />
           <Route path="/course/:id/menu" element={<CourseMenu />} />
           <Route path="/lesson/:id" element={<Lesson />} />
+          {/* Rutas de Profesor */}
+          <Route path="/teacher" element={<TeacherPanel />} />
 
           {/* Rutas de Administrador */}
           <Route 

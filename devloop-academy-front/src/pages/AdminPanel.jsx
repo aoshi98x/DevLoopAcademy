@@ -16,17 +16,23 @@ export default function AdminPanel() {
   // Estados para el Editor de Lecciones
   const [editingCourse, setEditingCourse] = useState(null);
   const [courseLessons, setCourseLessons] = useState([]);
-  const [isEditingLesson, setIsEditingLesson] = useState(false); // Estado para modo edición
+  const [isEditingLesson, setIsEditingLesson] = useState(false);
+  
+  // NUEVO: Estados de lección extendidos con meeting_url y meeting_time
   const [newLesson, setNewLesson] = useState({ 
     id: '', 
     title: '', 
     video_id: '', 
     markdown_url: '', 
+    meeting_url: '', 
+    meeting_time: '', 
     order_index: 0 
   });
 
-  // Estado para nuevo curso
-  const [newCourse, setNewCourse] = useState({ id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '' });
+  // NUEVO: Estado de curso extendido con teacher_id
+  const [newCourse, setNewCourse] = useState({ 
+    id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '', teacher_id: '' 
+  });
 
   useEffect(() => {
     if (profile && profile.role !== 'admin') {
@@ -44,22 +50,40 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
+  // Filtramos la lista de profesores para los menús desplegables
+  const teachers = users.filter(u => u.role === 'teacher' || u.role === 'admin');
+
   // --- LÓGICA DE CURSOS ---
   const handleCreateCourse = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('courses').insert([newCourse]);
+    
+    // Si no se selecciona profesor, mandamos null
+    const courseToInsert = { ...newCourse, teacher_id: newCourse.teacher_id || null };
+    
+    const { error } = await supabase.from('courses').insert([courseToInsert]);
     if (error) alert(error.message);
     else {
       alert("¡Curso creado!");
-      setNewCourse({ id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '' });
+      setNewCourse({ id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '', teacher_id: '' });
       fetchAdminData();
     }
+  };
+
+  // NUEVO: Asignar profesor a curso existente
+  const updateCourseTeacher = async (courseId, teacherId) => {
+    const { error } = await supabase
+      .from('courses')
+      .update({ teacher_id: teacherId || null })
+      .eq('id', courseId);
+    
+    if (error) alert("Error asignando profesor: " + error.message);
+    else fetchAdminData();
   };
 
   // --- LÓGICA DE LECCIONES ---
   const openLessonsEditor = async (course) => {
     setEditingCourse(course);
-    setIsEditingLesson(false); // Resetear modo edición al cambiar de curso
+    setIsEditingLesson(false);
     const { data, error } = await supabase
       .from('lessons')
       .select('*')
@@ -68,16 +92,26 @@ export default function AdminPanel() {
     
     if (error) console.error(error);
     setCourseLessons(data || []);
-    setNewLesson({ id: '', title: '', video_id: '', markdown_url: '', order_index: (data?.length || 0) + 1 });
+    setNewLesson({ id: '', title: '', video_id: '', markdown_url: '', meeting_url: '', meeting_time: '', order_index: (data?.length || 0) + 1 });
   };
 
   const startEditLesson = (lesson) => {
     setIsEditingLesson(true);
+    
+    // Convertir la fecha de Supabase a un formato compatible con el input datetime-local
+    let localTime = '';
+    if (lesson.meeting_time) {
+      const d = new Date(lesson.meeting_time);
+      localTime = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
     setNewLesson({
       id: lesson.id,
       title: lesson.title,
       video_id: lesson.video_id || '',
       markdown_url: lesson.markdown_url || '',
+      meeting_url: lesson.meeting_url || '',
+      meeting_time: localTime,
       order_index: lesson.order_index
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -86,14 +120,18 @@ export default function AdminPanel() {
   const handleSaveLesson = async (e) => {
     e.preventDefault();
     
+    // Formatear la fecha al guardar
+    const formattedTime = newLesson.meeting_time ? new Date(newLesson.meeting_time).toISOString() : null;
+    
     if (isEditingLesson) {
-      // ACTUALIZAR LECCIÓN EXISTENTE
       const { error } = await supabase
         .from('lessons')
         .update({
           title: newLesson.title,
           video_id: newLesson.video_id,
           markdown_url: newLesson.markdown_url,
+          meeting_url: newLesson.meeting_url,
+          meeting_time: formattedTime,
           order_index: newLesson.order_index
         })
         .eq('id', newLesson.id);
@@ -105,9 +143,9 @@ export default function AdminPanel() {
         openLessonsEditor(editingCourse);
       }
     } else {
-      // CREAR NUEVA LECCIÓN
       const { error } = await supabase.from('lessons').insert([{
         ...newLesson,
+        meeting_time: formattedTime,
         course_id: editingCourse.id
       }]);
 
@@ -137,6 +175,17 @@ export default function AdminPanel() {
     else fetchAdminData();
   };
 
+  // NUEVO: Cambiar rol de usuario
+  const updateUserRole = async (userId, newRole) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+      
+    if (error) alert(error.message);
+    else fetchAdminData();
+  };
+
   if (loading) return <div className="text-white p-10 font-bold animate-pulse">Cargando DevLoop Academy Control...</div>;
 
   return (
@@ -158,7 +207,7 @@ export default function AdminPanel() {
           onClick={() => setActiveTab('users')}
           className={`pb-4 px-2 font-medium transition-colors ${activeTab === 'users' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
         >
-          Estudiantes
+          Usuarios y Roles
         </button>
       </div>
 
@@ -166,6 +215,7 @@ export default function AdminPanel() {
         <div className="space-y-8">
           {!editingCourse ? (
             <>
+              {/* Formulario Crear Curso */}
               <form onSubmit={handleCreateCourse} className="bg-gray-900/30 p-6 rounded-2xl border border-gray-800 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <h3 className="col-span-full text-lg font-bold text-white mb-2 text-blue-400">Crear Nuevo Curso</h3>
                 <input 
@@ -180,6 +230,16 @@ export default function AdminPanel() {
                   value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})}
                   required
                 />
+                
+                {/* NUEVO: Select para el profesor */}
+                <select 
+                  className="bg-black border border-gray-700 p-3 rounded-lg text-gray-400 col-span-full"
+                  value={newCourse.teacher_id} onChange={e => setNewCourse({...newCourse, teacher_id: e.target.value})}
+                >
+                  <option value="">👨‍🏫 Sin profesor asignado (Opcional)</option>
+                  {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name || t.email}</option>)}
+                </select>
+
                 <textarea 
                   placeholder="Descripción corta" 
                   className="bg-black border border-gray-700 p-3 rounded-lg text-white col-span-full"
@@ -190,17 +250,32 @@ export default function AdminPanel() {
                 </button>
               </form>
 
+              {/* Lista de Cursos */}
               <div className="grid gap-4">
                 {courses.map(course => (
-                  <div key={course.id} className="bg-black border border-gray-800 p-4 rounded-xl flex justify-between items-center hover:border-gray-600 transition-all">
+                  <div key={course.id} className="bg-black border border-gray-800 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-gray-600 transition-all">
                     <div>
                       <h4 className="text-white font-bold">{course.title}</h4>
-                      <p className="text-gray-500 text-sm font-mono">{course.id}</p>
+                      <p className="text-gray-500 text-sm font-mono mb-2">{course.id}</p>
+                      
+                      {/* NUEVO: Asignación rápida de profesor */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Profesor:</span>
+                        <select 
+                          className="bg-gray-900 border border-gray-700 text-xs text-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                          value={course.teacher_id || ''}
+                          onChange={e => updateCourseTeacher(course.id, e.target.value)}
+                        >
+                          <option value="">No asignado</option>
+                          {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name || t.email}</option>)}
+                        </select>
+                      </div>
+
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full md:w-auto">
                       <button 
                         onClick={() => openLessonsEditor(course)}
-                        className="text-xs bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-600/30 px-4 py-2 rounded-lg transition-all"
+                        className="text-xs bg-blue-600/20 w-full md:w-auto hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-600/30 px-4 py-2 rounded-lg transition-all"
                       >
                         Editar Lecciones
                       </button>
@@ -224,6 +299,7 @@ export default function AdminPanel() {
                 {/* Formulario Nueva/Editar Lección */}
                 <form onSubmit={handleSaveLesson} className={`p-6 rounded-2xl border flex flex-col gap-4 h-fit sticky top-24 transition-colors ${isEditingLesson ? 'bg-blue-900/10 border-blue-500/50' : 'bg-gray-900/50 border-gray-800'}`}>
                   <h3 className="text-white font-bold mb-2">{isEditingLesson ? '📝 Editando Lección' : '➕ Añadir Lección'}</h3>
+                  
                   <input 
                     placeholder="ID lección" 
                     className={`bg-black border border-gray-700 p-2.5 rounded text-white text-sm ${isEditingLesson ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -238,21 +314,38 @@ export default function AdminPanel() {
                     required
                   />
                   <input 
-                    placeholder="YouTube Video ID" 
+                    placeholder="YouTube Video ID (Opcional)" 
                     className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm"
                     value={newLesson.video_id} onChange={e => setNewLesson({...newLesson, video_id: e.target.value})}
                   />
                   <input 
-                    placeholder="URL Markdown (Storage)" 
+                    placeholder="URL Markdown (Opcional)" 
                     className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm"
                     value={newLesson.markdown_url} onChange={e => setNewLesson({...newLesson, markdown_url: e.target.value})}
                   />
+                  
+                  {/* NUEVO: Campos para Sesión en Vivo */}
+                  <div className="pt-2 border-t border-gray-800 mt-2">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1 block">Configuración de Sesión en Vivo</label>
+                    <input 
+                      placeholder="URL de Reunión (Zoom, Meet, etc)" 
+                      className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm w-full mb-2"
+                      value={newLesson.meeting_url} onChange={e => setNewLesson({...newLesson, meeting_url: e.target.value})}
+                    />
+                    <input 
+                      type="datetime-local" 
+                      className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm w-full"
+                      value={newLesson.meeting_time} onChange={e => setNewLesson({...newLesson, meeting_time: e.target.value})}
+                    />
+                  </div>
+
                   <input 
                     type="number" placeholder="Orden" 
-                    className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm"
+                    className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm mt-2"
                     value={newLesson.order_index} onChange={e => setNewLesson({...newLesson, order_index: parseInt(e.target.value)})}
                   />
-                  <div className="flex flex-col gap-2">
+                  
+                  <div className="flex flex-col gap-2 mt-2">
                     <button className={`font-bold py-2 rounded-lg transition-colors text-white ${isEditingLesson ? 'bg-blue-600 hover:bg-blue-500' : 'bg-green-600 hover:bg-green-500'}`}>
                       {isEditingLesson ? 'Actualizar Lección' : 'Guardar Lección'}
                     </button>
@@ -276,7 +369,12 @@ export default function AdminPanel() {
                         <span className="text-blue-500 font-bold">#{lesson.order_index}</span>
                         <div>
                           <h5 className="text-white font-medium">{lesson.title}</h5>
-                          <p className="text-[10px] text-gray-500 font-mono">{lesson.id}</p>
+                          {/* Indicador visual de si tiene clase asignada */}
+                          {lesson.meeting_time ? (
+                            <span className="text-[10px] font-bold text-red-400 uppercase">Clase Sincrónica</span>
+                          ) : (
+                            <p className="text-[10px] text-gray-500 font-mono">{lesson.id}</p>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -308,41 +406,62 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* CONTENIDO: ESTUDIANTES */}
+      {/* CONTENIDO: USUARIOS */}
       {activeTab === 'users' && (
         <div className="bg-black border border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-          <table className="w-full text-left text-gray-300">
-            <thead className="bg-gray-900 text-xs uppercase text-gray-500">
-              <tr>
-                <th className="p-4">Estudiante</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Estado</th>
-                <th className="p-4 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {users.map(u => (
-                <tr key={u.id} className="hover:bg-gray-900/30 transition-colors">
-                  <td className="p-4 font-medium text-white">{u.full_name}</td>
-                  <td className="p-4 text-sm">{u.email || 'N/A'}</td>
-                  <td className="p-4">
-                    {u.is_active ? 
-                      <span className="text-green-500 text-[10px] font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase">Activo</span> : 
-                      <span className="text-gray-500 text-[10px] font-bold bg-gray-500/10 px-2 py-0.5 rounded border border-gray-500/20 uppercase">Inactivo</span>
-                    }
-                  </td>
-                  <td className="p-4 text-right">
-                    <button 
-                      onClick={() => toggleUserStatus(u.id, u.is_active)}
-                      className={`text-xs px-4 py-1.5 rounded-lg font-bold transition-all ${u.is_active ? 'bg-red-900/20 text-red-400 border border-red-900/30 hover:bg-red-900/40' : 'bg-blue-900/20 text-blue-400 border border-blue-900/30 hover:bg-blue-900/40'}`}
-                    >
-                      {u.is_active ? 'Inhabilitar' : 'Habilitar'}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-gray-300 min-w-max">
+              <thead className="bg-gray-900 text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="p-4">Usuario</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Suscripción</th>
+                  <th className="p-4">Rol en Plataforma</th>
+                  <th className="p-4 text-right">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {users.map(u => (
+                  <tr key={u.id} className="hover:bg-gray-900/30 transition-colors">
+                    <td className="p-4 font-medium text-white">{u.full_name || 'Desconocido'}</td>
+                    <td className="p-4 text-sm">{u.email || 'N/A'}</td>
+                    <td className="p-4">
+                      {u.is_active ? 
+                        <span className="text-green-500 text-[10px] font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase">Activa</span> : 
+                        <span className="text-gray-500 text-[10px] font-bold bg-gray-500/10 px-2 py-0.5 rounded border border-gray-500/20 uppercase">Inactiva</span>
+                      }
+                    </td>
+                    
+                    {/* NUEVO: Selector de Roles */}
+                    <td className="p-4">
+                      <select 
+                        className={`text-xs font-bold px-2 py-1.5 rounded outline-none border transition-colors ${
+                          u.role === 'admin' ? 'bg-red-900/20 text-red-400 border-red-900/30' :
+                          u.role === 'teacher' ? 'bg-purple-900/20 text-purple-400 border-purple-900/30' :
+                          'bg-gray-900 text-gray-300 border-gray-700'
+                        }`}
+                        value={u.role || 'student'}
+                        onChange={(e) => updateUserRole(u.id, e.target.value)}
+                      >
+                        <option value="student">Estudiante</option>
+                        <option value="teacher">Profesor</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+
+                    <td className="p-4 text-right">
+                      <button 
+                        onClick={() => toggleUserStatus(u.id, u.is_active)}
+                        className={`text-xs px-4 py-1.5 rounded-lg font-bold transition-all ${u.is_active ? 'bg-red-900/20 text-red-400 border border-red-900/30 hover:bg-red-900/40' : 'bg-blue-900/20 text-blue-400 border border-blue-900/30 hover:bg-blue-900/40'}`}
+                      >
+                        {u.is_active ? 'Inhabilitar' : 'Habilitar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

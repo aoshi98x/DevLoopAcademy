@@ -8,6 +8,9 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   
+  // NUEVO: Estado para detectar error de login y manejar recuperación
+  const [authError, setAuthError] = useState(false);
+
   // Nuevos campos de perfil
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -19,16 +22,16 @@ export default function Login() {
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setAuthError(false); // Resetear error al intentar de nuevo
 
     try {
       if (isRegistering) {
-        // Registro con metadatos adicionales
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              full_name: `${firstName} ${lastName}`, // Combinamos para el trigger
+              full_name: `${firstName} ${lastName}`,
               headline: headline,
               description: description,
             }
@@ -39,7 +42,13 @@ export default function Login() {
         setIsRegistering(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          // Si el error es de credenciales, activamos la opción de recuperar
+          if (error.message.includes("Invalid login credentials") || error.status === 400) {
+            setAuthError(true);
+          }
+          throw error;
+        }
         navigate('/dashboard');
       }
     } catch (error) {
@@ -47,6 +56,27 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // NUEVA FUNCIONALIDAD: Enviar solicitud de restablecimiento
+  const handleResetPassword = async () => {
+    if (!email) {
+      alert("Por favor, ingresa tu correo electrónico primero.");
+      return;
+    }
+    
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`, 
+    });
+
+    if (error) {
+      alert("Error: " + error.message);
+    } else {
+      alert("Se ha enviado un enlace de recuperación a tu correo.");
+      setAuthError(false);
+    }
+    setLoading(false);
   };
 
   return (
@@ -123,6 +153,19 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
             />
+            
+            {/* NUEVA SECCIÓN: RESTABLECER CONTRASEÑA (Solo aparece si falló el login) */}
+            {!isRegistering && authError && (
+              <div className="mt-2 text-right">
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors underline bg-transparent border-none p-0 cursor-pointer"
+                >
+                  ¿Olvidaste tu contraseña? Restablecer aquí
+                </button>
+              </div>
+            )}
           </div>
 
           <button
@@ -135,7 +178,10 @@ export default function Login() {
         </form>
 
         <button
-          onClick={() => setIsRegistering(!isRegistering)}
+          onClick={() => {
+            setIsRegistering(!isRegistering);
+            setAuthError(false); // Ocultar error si cambia de modo
+          }}
           className="w-full text-blue-400 hover:text-blue-300 text-sm mt-6 transition-colors"
         >
           {isRegistering ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}

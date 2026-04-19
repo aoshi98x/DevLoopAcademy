@@ -5,8 +5,12 @@ import { supabase } from '../lib/supabaseClient';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, isAdmin } = useAuth(); // Obtenemos el usuario y el rol admin del contexto
+  // AÑADIDO: Extraemos 'profile' para poder validar si es 'teacher'
+  const { user, profile, isAdmin } = useAuth(); 
   const navigate = useNavigate();
+
+  // Constante para saber si tiene acceso al panel de docente
+  const isTeacher = profile?.role === 'teacher';
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -20,9 +24,12 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           
           {/* LOGO */}
-          <Link to="/" className="text-xl font-bold tracking-tighter hover:text-blue-400 flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-sm">DL</div>
-            DevLoop Academy
+          <Link to="/" className="text-l font-semibold tracking-tighter hover:text-blue-400 flex items-center gap-0">
+            <img 
+              src="https://yrqewcxcaoqxvmjzpmth.supabase.co/storage/v1/object/public/images/Logo%20DevLoop.png" 
+              alt="DevLoop Academy Logo" 
+              className="h-8 w-auto object-contain transition-transform hover:scale-105"
+            />Academy
           </Link>
 
           {/* Menú Desktop */}
@@ -39,6 +46,21 @@ export default function Navbar() {
                       className="text-black/80 bg-cyan-200/60 border border-blue-900 px-5 py-1 rounded-md text-xs font-bold hover:bg-blue-900/10 transition-all uppercase tracking-wider"
                     >
                       Admin Panel
+                    </Link>
+                  </li>
+                )}
+
+                {/* NUEVO: BOTÓN PARA DOCENTES Y ADMINS */}
+                {(isTeacher || isAdmin) && (
+                  <li>
+                    <Link 
+                      to="/teacher" 
+                      className="flex items-center gap-1.5 text-purple-400 bg-purple-900/10 border border-purple-900/30 px-3 py-1 rounded-md text-xs font-bold hover:bg-purple-900/40 transition-all uppercase tracking-wider"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Docente
                     </Link>
                   </li>
                 )}
@@ -88,13 +110,27 @@ export default function Navbar() {
                     <li>
                       <Link 
                         to="/admin" 
-                        className="p-3 text-red-400 bg-red-900/10 rounded-lg block font-bold" 
+                        className="p-3 text-cyan-300 bg-cyan-900/20 rounded-lg block font-bold" 
                         onClick={() => setIsOpen(false)}
                       >
                         🛡️ Panel de Administración
                       </Link>
                     </li>
                   )}
+                  
+                  {/* NUEVO: ENLACE MÓVIL PARA DOCENTES */}
+                  {(isTeacher || isAdmin) && (
+                    <li>
+                      <Link 
+                        to="/teacher" 
+                        className="p-3 text-purple-400 bg-purple-900/10 rounded-lg block font-bold" 
+                        onClick={() => setIsOpen(false)}
+                      >
+                        🎓 Panel de Docente
+                      </Link>
+                    </li>
+                  )}
+
                   <li>
                     <Link to="/dashboard" className="p-3 hover:bg-gray-800 rounded-lg block" onClick={() => setIsOpen(false)}>Mi Panel</Link>
                   </li>
