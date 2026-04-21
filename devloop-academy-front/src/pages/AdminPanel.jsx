@@ -18,7 +18,6 @@ export default function AdminPanel() {
   const [courseLessons, setCourseLessons] = useState([]);
   const [isEditingLesson, setIsEditingLesson] = useState(false);
   
-  // NUEVO: Estados de lección extendidos con meeting_url y meeting_time
   const [newLesson, setNewLesson] = useState({ 
     id: '', 
     title: '', 
@@ -29,9 +28,9 @@ export default function AdminPanel() {
     order_index: 0 
   });
 
-  // NUEVO: Estado de curso extendido con teacher_id
+  // AÑADIDO: is_free en el estado inicial del curso
   const [newCourse, setNewCourse] = useState({ 
-    id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '', teacher_id: '' 
+    id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '', teacher_id: '', is_free: false 
   });
 
   useEffect(() => {
@@ -50,26 +49,24 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  // Filtramos la lista de profesores para los menús desplegables
   const teachers = users.filter(u => u.role === 'teacher' || u.role === 'admin');
 
   // --- LÓGICA DE CURSOS ---
   const handleCreateCourse = async (e) => {
     e.preventDefault();
     
-    // Si no se selecciona profesor, mandamos null
     const courseToInsert = { ...newCourse, teacher_id: newCourse.teacher_id || null };
     
     const { error } = await supabase.from('courses').insert([courseToInsert]);
     if (error) alert(error.message);
     else {
       alert("¡Curso creado!");
-      setNewCourse({ id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '', teacher_id: '' });
+      // AÑADIDO: Reiniciar is_free a false
+      setNewCourse({ id: '', title: '', description: '', image_url: '', video_id: '', syllabus_url: '', teacher_id: '', is_free: false });
       fetchAdminData();
     }
   };
 
-  // NUEVO: Asignar profesor a curso existente
   const updateCourseTeacher = async (courseId, teacherId) => {
     const { error } = await supabase
       .from('courses')
@@ -77,6 +74,17 @@ export default function AdminPanel() {
       .eq('id', courseId);
     
     if (error) alert("Error asignando profesor: " + error.message);
+    else fetchAdminData();
+  };
+
+  // NUEVO: Función para actualizar si es gratis o de pago
+  const updateCourseAccess = async (courseId, isFree) => {
+    const { error } = await supabase
+      .from('courses')
+      .update({ is_free: isFree })
+      .eq('id', courseId);
+    
+    if (error) alert("Error actualizando acceso: " + error.message);
     else fetchAdminData();
   };
 
@@ -98,7 +106,6 @@ export default function AdminPanel() {
   const startEditLesson = (lesson) => {
     setIsEditingLesson(true);
     
-    // Convertir la fecha de Supabase a un formato compatible con el input datetime-local
     let localTime = '';
     if (lesson.meeting_time) {
       const d = new Date(lesson.meeting_time);
@@ -120,7 +127,6 @@ export default function AdminPanel() {
   const handleSaveLesson = async (e) => {
     e.preventDefault();
     
-    // Formatear la fecha al guardar
     const formattedTime = newLesson.meeting_time ? new Date(newLesson.meeting_time).toISOString() : null;
     
     if (isEditingLesson) {
@@ -175,7 +181,6 @@ export default function AdminPanel() {
     else fetchAdminData();
   };
 
-  // NUEVO: Cambiar rol de usuario
   const updateUserRole = async (userId, newRole) => {
     const { error } = await supabase
       .from('profiles')
@@ -231,13 +236,23 @@ export default function AdminPanel() {
                   required
                 />
                 
-                {/* NUEVO: Select para el profesor */}
+                {/* Select para el profesor */}
                 <select 
-                  className="bg-black border border-gray-700 p-3 rounded-lg text-gray-400 col-span-full"
+                  className="bg-black border border-gray-700 p-3 rounded-lg text-gray-400"
                   value={newCourse.teacher_id} onChange={e => setNewCourse({...newCourse, teacher_id: e.target.value})}
                 >
                   <option value="">👨‍🏫 Sin profesor asignado (Opcional)</option>
                   {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name || t.email}</option>)}
+                </select>
+
+                {/* NUEVO: Selector de Acceso (Gratis/Premium) en creación */}
+                <select 
+                  className="bg-black border border-gray-700 p-3 rounded-lg text-gray-400"
+                  value={newCourse.is_free ? 'true' : 'false'} 
+                  onChange={e => setNewCourse({...newCourse, is_free: e.target.value === 'true'})}
+                >
+                  <option value="false">🔒 Curso Premium (De pago)</option>
+                  <option value="true">🎁 Curso Gratuito</option>
                 </select>
 
                 <textarea 
@@ -258,21 +273,40 @@ export default function AdminPanel() {
                       <h4 className="text-white font-bold">{course.title}</h4>
                       <p className="text-gray-500 text-sm font-mono mb-2">{course.id}</p>
                       
-                      {/* NUEVO: Asignación rápida de profesor */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Profesor:</span>
-                        <select 
-                          className="bg-gray-900 border border-gray-700 text-xs text-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-500 outline-none"
-                          value={course.teacher_id || ''}
-                          onChange={e => updateCourseTeacher(course.id, e.target.value)}
-                        >
-                          <option value="">No asignado</option>
-                          {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name || t.email}</option>)}
-                        </select>
+                      <div className="flex flex-wrap items-center gap-4 mt-2">
+                        {/* Asignación rápida de profesor */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Profesor:</span>
+                          <select 
+                            className="bg-gray-900 border border-gray-700 text-xs text-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                            value={course.teacher_id || ''}
+                            onChange={e => updateCourseTeacher(course.id, e.target.value)}
+                          >
+                            <option value="">No asignado</option>
+                            {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name || t.email}</option>)}
+                          </select>
+                        </div>
+
+                        {/* NUEVO: Toggle rápido de Gratis/Premium */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Acceso:</span>
+                          <select 
+                            className={`text-xs font-bold px-2 py-1 rounded outline-none border transition-colors ${
+                              course.is_free 
+                              ? 'bg-green-900/20 text-green-400 border-green-900/30' 
+                              : 'bg-blue-900/20 text-blue-400 border-blue-900/30'
+                            }`}
+                            value={course.is_free ? 'true' : 'false'}
+                            onChange={e => updateCourseAccess(course.id, e.target.value === 'true')}
+                          >
+                            <option value="false">Premium</option>
+                            <option value="true">Gratis</option>
+                          </select>
+                        </div>
                       </div>
 
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
+                    <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
                       <button 
                         onClick={() => openLessonsEditor(course)}
                         className="text-xs bg-blue-600/20 w-full md:w-auto hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-600/30 px-4 py-2 rounded-lg transition-all"
@@ -324,7 +358,6 @@ export default function AdminPanel() {
                     value={newLesson.markdown_url} onChange={e => setNewLesson({...newLesson, markdown_url: e.target.value})}
                   />
                   
-                  {/* NUEVO: Campos para Sesión en Vivo */}
                   <div className="pt-2 border-t border-gray-800 mt-2">
                     <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1 block">Configuración de Sesión en Vivo</label>
                     <input 
@@ -369,7 +402,6 @@ export default function AdminPanel() {
                         <span className="text-blue-500 font-bold">#{lesson.order_index}</span>
                         <div>
                           <h5 className="text-white font-medium">{lesson.title}</h5>
-                          {/* Indicador visual de si tiene clase asignada */}
                           {lesson.meeting_time ? (
                             <span className="text-[10px] font-bold text-red-400 uppercase">Clase Sincrónica</span>
                           ) : (
@@ -432,7 +464,6 @@ export default function AdminPanel() {
                       }
                     </td>
                     
-                    {/* NUEVO: Selector de Roles */}
                     <td className="p-4">
                       <select 
                         className={`text-xs font-bold px-2 py-1.5 rounded outline-none border transition-colors ${

@@ -24,7 +24,8 @@ export default function CourseMenu() {
   }, []);
 
   useEffect(() => {
-    if (!user || !profile?.is_active) {
+    // 1. Si no hay usuario en absoluto, lo expulsamos
+    if (!user) {
       navigate(`/course/${id}`);
       return;
     }
@@ -32,15 +33,22 @@ export default function CourseMenu() {
     const fetchCourseData = async () => {
       setLoading(true);
 
+      // Traer info del curso (IMPORTANTE: ahora pedimos is_free)
       const { data: courseData } = await supabase
         .from('courses')
-        .select('title, description')
+        .select('title, description, is_free')
         .eq('id', id)
         .single();
+
+      // 2. LA NUEVA REGLA: Si el curso NO es gratis Y el perfil NO está activo -> Expulsado
+      if (courseData && !courseData.is_free && !profile?.is_active) {
+        navigate(`/course/${id}`);
+        return;
+      }
         
       if (courseData) setCourse(courseData);
 
-      // Traer lecciones (Asegúrate de que la BD ahora tenga 'meeting_time')
+      // Traer las lecciones vinculadas
       const { data: lessonsData, error } = await supabase
         .from('lessons')
         .select('*')

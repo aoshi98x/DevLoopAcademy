@@ -43,7 +43,7 @@ export default function Navbar() {
                   <li>
                     <Link 
                       to="/admin" 
-                      className="text-black/80 bg-cyan-200/60 border border-blue-900 px-5 py-1 rounded-md text-xs font-bold hover:bg-blue-900/10 transition-all uppercase tracking-wider"
+                      className="text-black/80 bg-cyan-200/60 border border-blue-900 px-5 py-1 rounded-md text-xs font-bold hover:bg-blue-900/10 hover:text-white/80 transition-all uppercase tracking-wider"
                     >
                       Admin Panel
                     </Link>
