@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext'; // Importamos tu contexto global
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  // AÑADIDO: Extraemos 'profile' para poder validar si es 'teacher'
   const { user, profile, isAdmin } = useAuth(); 
   const navigate = useNavigate();
+  
+  // 1. Obtenemos la ruta actual para el botón condicional
+  const location = useLocation();
+  const isHome = location.pathname === '/';
 
   // Constante para saber si tiene acceso al panel de docente
   const isTeacher = profile?.role === 'teacher';
@@ -36,6 +39,18 @@ export default function Navbar() {
           <ul className="hidden md:flex items-center space-x-6 font-medium">
             <li><Link to="/" className="hover:text-blue-400 transition-colors">Inicio</Link></li>
             
+            {/* BOTÓN CONDICIONAL DE PLANES (CORREGIDO SIN HREF) */}
+            {isHome && (
+              <li>
+                <button 
+                  onClick={() => document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-gray-300 hover:text-white font-medium transition-colors cursor-pointer"
+                >
+                  Planes y Precios
+                </button>
+              </li>
+            )}
+            
             {user ? (
               <>
                 {/* BOTÓN SOLO PARA ADMINS */}
@@ -49,8 +64,8 @@ export default function Navbar() {
                     </Link>
                   </li>
                 )}
-
-                {/* NUEVO: BOTÓN PARA DOCENTES Y ADMINS */}
+                
+                {/* BOTÓN PARA DOCENTES Y ADMINS */}
                 {(isTeacher || isAdmin) && (
                   <li>
                     <Link 
@@ -64,7 +79,7 @@ export default function Navbar() {
                     </Link>
                   </li>
                 )}
-
+                
                 <li><Link to="/dashboard" className="hover:text-blue-400 transition-colors">Mi Panel</Link></li>
                 
                 <li>
@@ -104,6 +119,21 @@ export default function Navbar() {
                 <Link to="/" className="p-3 hover:bg-gray-800 rounded-lg block" onClick={() => setIsOpen(false)}>Inicio</Link>
               </li>
               
+              {/* BOTÓN CONDICIONAL DE PLANES MÓVIL */}
+              {isHome && (
+                <li>
+                  <button 
+                    onClick={() => {
+                      setIsOpen(false);
+                      document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="w-full text-left p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg font-medium cursor-pointer"
+                  >
+                    Planes y Precios
+                  </button>
+                </li>
+              )}
+
               {user ? (
                 <>
                   {isAdmin && (
@@ -118,7 +148,6 @@ export default function Navbar() {
                     </li>
                   )}
                   
-                  {/* NUEVO: ENLACE MÓVIL PARA DOCENTES */}
                   {(isTeacher || isAdmin) && (
                     <li>
                       <Link 

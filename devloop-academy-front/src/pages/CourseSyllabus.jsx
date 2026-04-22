@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -86,7 +86,7 @@ export default function CourseSyllabus() {
     }
     // Para reservar cupo en vivo, sí requerimos que sea un usuario activo (o definir si los gratis también reservan)
     if (!isActive && !course?.is_free) {
-      alert("Debes tener una suscripción activa para apartar cupo en clases en vivo.");
+      alert("Debes tener una suscripción activa o haber comprado el curso para apartar cupo en clases en vivo.");
       return;
     }
 
@@ -109,6 +109,16 @@ export default function CourseSyllabus() {
     } finally {
       setEnrolling(false);
     }
+  };
+  const handleBuyCourse = () => {
+    const checkoutData = {
+      type: 'lifetime',
+      id: course.id,
+      name: `Curso: ${course.title}`,
+      price: course.price || 0
+    };
+    localStorage.setItem('devloop_checkout', JSON.stringify(checkoutData));
+    navigate('/checkout');
   };
 
   return (
@@ -151,28 +161,55 @@ export default function CourseSyllabus() {
         {/* Barra de acción inferior */}
         <div className="bg-gray-900/50 border-t border-gray-800 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-blue-400 text-sm sm:text-base">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
-            <span className="font-medium">Temario disponible</span>
+            <span className="font-medium text-left">Temario disponible</span>
           </div>
           
-          {canAccess ? (
-            <button 
-              onClick={() => navigate(`/course/${id}/menu`)}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 sm:px-8 rounded-xl transition-all hover:scale-105 shadow-lg shadow-blue-900/40"
-            >
-              Ir al salón de clases
-            </button>
-          ) : (
-            <button 
-              onClick={() => navigate('/login')}
-              className="w-full sm:w-auto bg-white text-black font-bold py-3 px-6 sm:px-8 rounded-xl transition-all hover:scale-105"
-            >
-              {/* Si es gratis pero no está logueado, le pide iniciar sesión. Si es de pago, le pide inscribirse */}
-              {course?.is_free && !user ? 'Inicia sesión para entrar' : 'Inscribirme ahora'}
-            </button>
-          )}
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
+            {canAccess ? (
+              <button 
+                onClick={() => navigate(`/course/${id}/menu`)}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 sm:px-8 rounded-xl transition-all hover:scale-105 shadow-lg shadow-blue-900/40"
+              >
+                Ir al salón de clases
+              </button>
+            ) : (
+              <>
+                {!user ? (
+                  <button 
+                    onClick={() => navigate('/login')}
+                    className="w-full sm:w-auto bg-white text-black font-bold py-3 px-6 sm:px-8 rounded-xl transition-all hover:scale-105"
+                  >
+                    {course?.is_free ? 'Inicia sesión para entrar' : 'Inscribirme ahora'}
+                  </button>
+                ) : (
+                  // NUEVO: Opciones de compra vitalicia y suscripción
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                    {!course?.is_free && (
+                      <button 
+                        onClick={handleBuyCourse}
+                        className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Comprar por ${course?.price || '0.00'}
+                      </button>
+                    )}
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-widest hidden sm:block">o</span>
+                    <a 
+                      href="/#planes" 
+                      className="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-xl transition-all border border-gray-700 text-center"
+                    >
+                      Ver Suscripciones
+                    </a>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -251,6 +288,7 @@ export default function CourseSyllabus() {
             </div>
           </div>
         )}
+        
         {/* CONTENIDO DEL TEMARIO (MARKDOWN) ALINEADO A LA IZQUIERDA */}
         <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 p-6 sm:p-8 md:p-12 shadow-2xl text-left">
           <div className="w-full overflow-hidden">
