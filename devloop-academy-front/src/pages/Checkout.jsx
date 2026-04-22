@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { supabase } from '../lib/supabaseClient';
 import { PayPalButtons } from "@paypal/react-paypal-js";
+import { useSettings } from '../hooks/useSettings';
 
 export default function Checkout() {
   const [order, setOrder] = useState(null);
