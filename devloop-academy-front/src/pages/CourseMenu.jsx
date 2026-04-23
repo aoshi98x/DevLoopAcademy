@@ -8,23 +8,21 @@ export default function CourseMenu() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  
+
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedLesson, setExpandedLesson] = useState(null);
-  
-  // NUEVO: Reloj interno para calcular los 30 minutos en tiempo real
+
+  // Reloj interno para calcular los tiempos en tiempo real
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    // Actualizar la hora cada minuto (60000 ms) para desbloquear botones automáticamente
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    // 1. Si no hay usuario en absoluto, lo expulsamos
     if (!user) {
       navigate(`/course/${id}`);
       return;
@@ -33,27 +31,25 @@ export default function CourseMenu() {
     const fetchCourseData = async () => {
       setLoading(true);
 
-      // Traer info del curso (IMPORTANTE: ahora pedimos is_free)
+      // CORRECCIÓN: Se añade 'is_synchronous' a la consulta
       const { data: courseData } = await supabase
         .from('courses')
-        .select('title, description, is_free')
+        .select('title, description, is_free, is_synchronous')
         .eq('id', id)
         .single();
 
-      // 2. LA NUEVA REGLA: Si el curso NO es gratis Y el perfil NO está activo -> Expulsado
       if (courseData && !courseData.is_free && !profile?.is_active) {
         navigate(`/course/${id}`);
         return;
       }
-        
+
       if (courseData) setCourse(courseData);
 
-      // Traer las lecciones vinculadas
       const { data: lessonsData, error } = await supabase
         .from('lessons')
         .select('*')
         .eq('course_id', id)
-        .order('order_index', { ascending: true }); 
+        .order('order_index', { ascending: true });
 
       if (error) {
         console.error("Error cargando lecciones:", error);
@@ -72,7 +68,7 @@ export default function CourseMenu() {
         }));
         setLessons(lessonsWithContent);
       }
-      
+
       setLoading(false);
     };
 
@@ -93,7 +89,7 @@ export default function CourseMenu() {
     <div className="max-w-4xl mx-auto py-12 px-4">
       {/* Cabecera */}
       <div className="mb-10 border-b border-gray-800 pb-8">
-        <Link 
+        <Link
           to={`/course/${id}`}
           className="text-blue-500 hover:text-blue-400 text-sm font-medium mb-4 inline-flex items-center gap-2 transition-colors"
         >
@@ -109,7 +105,7 @@ export default function CourseMenu() {
       {/* Lista de Lecciones */}
       <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 p-6 shadow-2xl">
         <h3 className="text-lg font-bold text-white mb-6 uppercase tracking-widest text-sm">Lecciones disponibles</h3>
-        
+
         {lessons.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-gray-500">Aún no hay lecciones publicadas en este curso.</p>
@@ -120,12 +116,11 @@ export default function CourseMenu() {
               const isExpanded = expandedLesson === lesson.id;
 
               return (
-                <div 
-                  key={lesson.id} 
+                <div
+                  key={lesson.id}
                   className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300"
                 >
-                  {/* Cabecera del Acordeón */}
-                  <button 
+                  <button
                     onClick={() => toggleLesson(lesson.id)}
                     className="w-full group flex items-center justify-between p-4 hover:bg-gray-800 transition-colors text-left"
                   >
@@ -133,7 +128,7 @@ export default function CourseMenu() {
                       <div className="w-10 h-10 rounded-full bg-blue-900/20 text-blue-400 flex items-center justify-center font-bold text-sm border border-blue-900/30 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-colors">
                         {index + 1}
                       </div>
-                      
+
                       <div>
                         <h4 className="text-gray-200 font-medium group-hover:text-white transition-colors">
                           {lesson.title}
@@ -148,8 +143,8 @@ export default function CourseMenu() {
                     </div>
 
                     <div className="text-gray-600 group-hover:text-blue-400 transition-colors">
-                      <svg 
-                        className={`w-6 h-6 transform transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-400' : ''}`} 
+                      <svg
+                        className={`w-6 h-6 transform transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-400' : ''}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -157,30 +152,27 @@ export default function CourseMenu() {
                     </div>
                   </button>
 
-                  {/* Contenido Expandible */}
                   {isExpanded && (
                     <div className="p-6 border-t border-gray-800 bg-gray-900/30">
-                      
+
                       {/* LÓGICA DE BLOQUEO DE REUNIÓN */}
                       {lesson.meeting_url && (
                         <div className="mb-6 pb-6 border-b border-gray-800">
                           {(() => {
                             const hasTime = !!lesson.meeting_time;
                             const meetingDate = hasTime ? new Date(lesson.meeting_time) : null;
-                            
+
                             let isMeetingActive = true;
                             let isMeetingEnded = false;
                             let formattedTime = "";
 
                             if (meetingDate) {
-                              // Tiempos clave en milisegundos
                               const thirtyMinsBefore = new Date(meetingDate.getTime() - (30 * 60 * 1000));
                               const fourHoursAfter = new Date(meetingDate.getTime() + (4 * 60 * 60 * 1000));
-                              
-                              // Evaluamos en qué etapa estamos
+
                               isMeetingEnded = currentTime >= fourHoursAfter;
                               isMeetingActive = currentTime >= thirtyMinsBefore && !isMeetingEnded;
-                              
+
                               if (!isMeetingActive && !isMeetingEnded) {
                                 formattedTime = meetingDate.toLocaleString('es-ES', {
                                   weekday: 'long',
@@ -195,7 +187,6 @@ export default function CourseMenu() {
                             return (
                               <div className="flex flex-col items-center gap-2">
                                 {isMeetingEnded ? (
-                                  // ESTADO 3: LA CLASE YA TERMINÓ (Pasaron 4 horas)
                                   <>
                                     <div className="w-fit inline-flex items-center gap-2 bg-gray-900/50 text-gray-600 font-bold py-3 px-6 rounded-xl border border-gray-800 cursor-not-allowed">
                                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -208,11 +199,10 @@ export default function CourseMenu() {
                                     </p>
                                   </>
                                 ) : isMeetingActive ? (
-                                  // ESTADO 2: LA CLASE ESTÁ ACTIVA
                                   <>
-                                    <a 
-                                      href={lesson.meeting_url} 
-                                      target="_blank" 
+                                    <a
+                                      href={lesson.meeting_url}
+                                      target="_blank"
                                       rel="noreferrer"
                                       className="w-fit inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:scale-105"
                                     >
@@ -226,7 +216,6 @@ export default function CourseMenu() {
                                     </p>
                                   </>
                                 ) : (
-                                  // ESTADO 1: ESPERANDO A QUE EMPIECE
                                   <>
                                     <div className="w-fit inline-flex items-center gap-2 bg-gray-800/50 text-gray-500 font-bold py-3 px-6 rounded-xl border border-gray-700 cursor-not-allowed">
                                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -252,7 +241,6 @@ export default function CourseMenu() {
                         </div>
                       )}
 
-                      {/* Markdown de la lección */}
                       <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-left text-white prose-p:text-gray-300 prose-headings:text-blue-400 prose-a:text-blue-400 hover:prose-a:text-blue-300">
                         <ReactMarkdown
                           components={{
@@ -275,18 +263,17 @@ export default function CourseMenu() {
                         {(() => {
                           const hasTime = !!lesson.meeting_time;
                           const meetingDate = hasTime ? new Date(lesson.meeting_time) : null;
-                          
-                          // Por defecto está disponible (para cursos pre-grabados sin horario)
-                          let isRecordingAvailable = true; 
 
-                          if (hasTime) {
-                            // Sumamos 4 horas en milisegundos (4 * 60 min * 60 seg * 1000 ms)
+                          // CORRECCIÓN FUNCIONAL: Solo se bloquea si el curso es sincrónico Y tiene horario definido
+                          let isRecordingAvailable = true;
+
+                          if (course?.is_synchronous && hasTime) {
                             const fourHoursAfter = new Date(meetingDate.getTime() + (4 * 60 * 60 * 1000));
                             isRecordingAvailable = currentTime >= fourHoursAfter;
                           }
 
                           return isRecordingAvailable ? (
-                            <Link 
+                            <Link
                               to={`/lesson/${lesson.id}`}
                               className="flex items-center gap-2 text-sm bg-gray-800 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors border border-gray-700"
                             >
@@ -296,7 +283,7 @@ export default function CourseMenu() {
                               </svg>
                             </Link>
                           ) : (
-                            <div 
+                            <div
                               className="flex items-center gap-2 text-sm bg-gray-900/50 text-gray-600 font-medium py-2 px-4 rounded-lg border border-gray-800 cursor-not-allowed"
                               title="La grabación estará disponible 4 horas después de iniciada la sesión."
                             >
@@ -308,7 +295,6 @@ export default function CourseMenu() {
                           );
                         })()}
                       </div>
-
                     </div>
                   )}
                 </div>

@@ -10,7 +10,7 @@ export default function Checkout() {
   const [order, setOrder] = useState(null);
   const [method, setMethod] = useState('wompi'); // 'wompi' o 'paypal'
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const { formatPrice, currency, isForeign, loadingCurrency, exchangeRate } = useCurrency();
@@ -25,8 +25,8 @@ export default function Checkout() {
   // Lógica para Wompi (Igual a la anterior)
   const handleWompi = async () => {
     setIsProcessing(true);
-    const reference = `DL-W-${user.id.slice(0,4)}-${Date.now()}`;
-    
+    const reference = `DL-W-${user.id.slice(0, 4)}-${Date.now()}`;
+
     try {
       await supabase.from('payments_log').insert([{
         user_id: user.id, reference, amount: order.price,
@@ -40,7 +40,7 @@ export default function Checkout() {
         publicKey: keys.wompi,
         redirectUrl: `${window.location.origin}/dashboard`,
       });
-      checkout.open((res) => { if(res.transaction.status === 'APPROVED') navigate('/dashboard'); });
+      checkout.open((res) => { if (res.transaction.status === 'APPROVED') navigate('/dashboard'); });
     } catch (e) { setIsProcessing(false); }
   };
 
@@ -49,7 +49,7 @@ export default function Checkout() {
   return (
     <div className="min-h-screen py-12 md:py-20 px-4 flex justify-center items-center">
       <div className="max-w-5xl w-full bg-black/80 backdrop-blur-md rounded-3xl border border-gray-800 p-8 md:p-12 shadow-2xl flex flex-col md:flex-row gap-10">
-        
+
         {/* COLUMNA IZQUIERDA: Resumen */}
         <div className="flex-1 space-y-6">
           <h1 className="text-3xl font-extrabold text-white">Finalizar Suscripción</h1>
@@ -73,7 +73,7 @@ export default function Checkout() {
 
           <div className="min-h-[200px] flex flex-col justify-center">
             {method === 'wompi' ? (
-              <button 
+              <button
                 onClick={handleWompi}
                 className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex justify-center items-center gap-3"
               >
@@ -81,7 +81,7 @@ export default function Checkout() {
                 Pagar con Wompi
               </button>
             ) : (
-              <PayPalButtons 
+              <PayPalButtons
                 style={{ layout: "vertical", color: "gold", shape: "rect" }}
                 options={{ "client-id": keys.paypal }}
                 createOrder={(data, actions) => {

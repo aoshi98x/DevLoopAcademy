@@ -29,26 +29,26 @@ function AppContent() {
   const keys = getPaymentKeys();
   return (
     <>
-    <CurrencyProvider>
-      {/* Configuración de PayPal */}
-      <PayPalScriptProvider options={{ "client-id": keys.paypal, currency: "USD" }}>
-        {/* Se usa el ScrollToTop para marcar arriba la navegación al visitar */}
-        <ScrollToTop />
+      <CurrencyProvider>
+        {/* Configuración de PayPal */}
+        <PayPalScriptProvider options={{ "client-id": keys.paypal, currency: "USD" }}>
+          {/* Se usa el ScrollToTop para marcar arriba la navegación al visitar */}
+          <ScrollToTop />
           {/* El Navbar se mantiene global */}
           <Navbar />
           {/* El fondo de partículas también se mantiene global */}
           <ParticleBackground />
           {/* Lógica del botón flotante corregida */}
           {location.pathname === '/' && <FloatingButton />}
-          
-          <main className="min-h-[calc(100vh-64px)]"> 
+
+          <main className="min-h-[calc(100vh-64px)]">
             <Routes>
               {/* Rutas Públicas */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/mentors" element={<Mentors />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              
+
               {/* Rutas de Estudiante */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/edit-profile" element={<EditProfile />} />
@@ -60,13 +60,13 @@ function AppContent() {
               {/* Rutas de sistema de compras */}
               <Route path="/checkout" element={<Checkout />} />
               {/* Rutas de Administrador */}
-              <Route 
-                path="/admin" 
+              <Route
+                path="/admin"
                 element={
-                  <AdminRoute> 
-                    <AdminPanel /> 
+                  <AdminRoute>
+                    <AdminPanel />
                   </AdminRoute>
-                } 
+                }
               />
             </Routes>
           </main>

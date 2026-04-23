@@ -8,7 +8,7 @@ export default function CourseSyllabus() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  
+
   const [course, setCourse] = useState(null);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,7 @@ export default function CourseSyllabus() {
   // Lógica de acceso: Activo por suscripción O porque el curso es gratuito
   const isActive = profile?.is_active || false;
   const canAccess = user && (course?.is_free || isActive);
-  
+
   const [enrollments, setEnrollments] = useState([]);
   const [userSchedule, setUserSchedule] = useState(null);
   const [enrolling, setEnrolling] = useState(false);
@@ -36,14 +36,14 @@ export default function CourseSyllabus() {
         setLoading(false);
         return;
       }
-      
+
       setCourse(courseData);
-      
+
       const { data: enrolls } = await supabase
         .from('course_enrollments')
         .select('*')
         .eq('course_id', id);
-      
+
       setEnrollments(enrolls || []);
 
       if (user && enrolls) {
@@ -53,12 +53,12 @@ export default function CourseSyllabus() {
 
       try {
         // El temario cambia si el curso es sincrónico y el usuario no es activo
-        const targetSyllabusUrl = (courseData.is_synchronous && courseData.sync_syllabus_url && !isActive) 
-          ? courseData.sync_syllabus_url 
+        const targetSyllabusUrl = (courseData.is_synchronous && courseData.sync_syllabus_url && !isActive)
+          ? courseData.sync_syllabus_url
           : courseData.syllabus_url;
 
         if (!targetSyllabusUrl) throw new Error("Sin temario configurado");
-        
+
         const response = await fetch(targetSyllabusUrl);
         if (!response.ok) throw new Error("Error en descarga");
         const text = await response.text();
@@ -69,7 +69,7 @@ export default function CourseSyllabus() {
         setLoading(false);
       }
     };
-    
+
     fetchSyllabus();
   }, [id, user, isActive]);
 
@@ -103,7 +103,7 @@ export default function CourseSyllabus() {
       setUserSchedule(scheduleObj.text);
       setEnrollments([...enrollments, { user_id: user.id, schedule_text: scheduleObj.text }]);
       alert("¡Cupo reservado con éxito!");
-      
+
     } catch (error) {
       alert("Error al reservar cupo: " + error.message);
     } finally {
@@ -123,16 +123,16 @@ export default function CourseSyllabus() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8 font-sans">
-      
+
       {/* Cabecera del Curso */}
       <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 overflow-hidden shadow-2xl mb-8">
         <div className="min-h-[320px] sm:min-h-[380px] md:aspect-[21/9] w-full bg-gray-900 relative">
-          <img 
-            src={course?.image_url || 'https://via.placeholder.com/800x400'} 
+          <img
+            src={course?.image_url || 'https://via.placeholder.com/800x400'}
             alt={course?.title}
             className="w-full h-full object-cover opacity-40 absolute inset-0"
           />
-          
+
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent flex flex-col justify-end p-5 sm:p-8 md:p-12">
             <div className="flex gap-3 mb-3 sm:mb-4">
               {/* Badge de Gratis / Premium */}
@@ -151,13 +151,13 @@ export default function CourseSyllabus() {
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 sm:mb-4 leading-tight">
               {course?.title}
             </h1>
-            
+
             <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-2xl leading-relaxed line-clamp-2 sm:line-clamp-none">
               {course?.description}
             </p>
           </div>
         </div>
-        
+
         {/* Barra de acción inferior */}
         <div className="bg-gray-900/50 border-t border-gray-800 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-blue-400 text-sm sm:text-base">
@@ -166,10 +166,10 @@ export default function CourseSyllabus() {
             </svg>
             <span className="font-medium text-left">Temario disponible</span>
           </div>
-          
+
           <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
             {canAccess ? (
-              <button 
+              <button
                 onClick={() => navigate(`/course/${id}/menu`)}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 sm:px-8 rounded-xl transition-all hover:scale-105 shadow-lg shadow-blue-900/40"
               >
@@ -178,17 +178,16 @@ export default function CourseSyllabus() {
             ) : (
               <>
                 {!user ? (
-                  <button 
+                  <button
                     onClick={() => navigate('/login')}
                     className="w-full sm:w-auto bg-white text-black font-bold py-3 px-6 sm:px-8 rounded-xl transition-all hover:scale-105"
                   >
                     {course?.is_free ? 'Inicia sesión para entrar' : 'Inscribirme ahora'}
                   </button>
                 ) : (
-                  // NUEVO: Opciones de compra vitalicia y suscripción
                   <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
                     {!course?.is_free && (
-                      <button 
+                      <button
                         onClick={handleBuyCourse}
                         className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2"
                       >
@@ -199,12 +198,13 @@ export default function CourseSyllabus() {
                       </button>
                     )}
                     <span className="text-gray-500 text-xs font-bold uppercase tracking-widest hidden sm:block">o</span>
-                    <a 
-                      href="/#planes" 
+                    {/* CORRECCIÓN AQUÍ: Se cambió el <a> por un <button> con navigate a /#planes */}
+                    <button
+                      onClick={() => navigate('/#planes')}
                       className="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-xl transition-all border border-gray-700 text-center"
                     >
                       Ver Suscripciones
-                    </a>
+                    </button>
                   </div>
                 )}
               </>
@@ -222,7 +222,7 @@ export default function CourseSyllabus() {
             </svg>
             Horarios y Cupos
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {course.schedules.map((schedule, index) => {
               const enrolledCount = enrollments.filter(e => e.schedule_text === schedule.text).length;
@@ -231,16 +231,16 @@ export default function CourseSyllabus() {
               const isMySchedule = userSchedule === schedule.text;
 
               return (
-                <button 
+                <button
                   key={index}
                   disabled={isFull || userSchedule || enrolling}
                   onClick={() => handleEnrollSchedule(schedule)}
                   className={`text-left rounded-xl p-4 flex items-start gap-4 transition-all duration-300 border
-                    ${isMySchedule 
+                    ${isMySchedule
                       ? 'bg-green-900/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
-                      : isFull 
+                      : isFull
                         ? 'bg-black/40 border-gray-800 opacity-60 cursor-not-allowed'
-                        : userSchedule 
+                        : userSchedule
                           ? 'bg-black/60 border-gray-800 opacity-50 cursor-not-allowed'
                           : 'bg-black/60 border-gray-700 hover:border-blue-500 hover:bg-gray-800 cursor-pointer'
                     }
@@ -269,7 +269,7 @@ export default function CourseSyllabus() {
           </div>
         </div>
       )}
-          
+
       <div className="grid grid-cols-1 gap-8 pb-20">
         {/* VIDEO DE INTRODUCCIÓN */}
         {course?.video_id && (
@@ -279,8 +279,8 @@ export default function CourseSyllabus() {
               <span className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-widest">Vista Previa</span>
             </div>
             <div className="aspect-video w-full bg-gray-900">
-              <iframe 
-                src={`https://www.youtube.com/embed/${course.video_id}`} 
+              <iframe
+                src={`https://www.youtube.com/embed/${course.video_id}`}
                 className="w-full h-full"
                 allowFullScreen
                 title="Intro"
@@ -288,8 +288,8 @@ export default function CourseSyllabus() {
             </div>
           </div>
         )}
-        
-        {/* CONTENIDO DEL TEMARIO (MARKDOWN) ALINEADO A LA IZQUIERDA */}
+
+        {/* CONTENIDO DEL TEMARIO */}
         <div className="bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 p-6 sm:p-8 md:p-12 shadow-2xl text-left">
           <div className="w-full overflow-hidden">
             <div className="prose prose-sm sm:prose lg:prose-lg prose-invert max-w-none 

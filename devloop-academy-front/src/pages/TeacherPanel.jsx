@@ -6,24 +6,23 @@ import { useNavigate } from 'react-router-dom';
 export default function TeacherPanel() {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [myCourses, setMyCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  
+
   // Pestañas internas del panel
   const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' o 'students'
-  
-  // Estados para Sesiones (AÑADIDOS video_id y markdown_url)
+
+  // Estados para Sesiones
   const [lessons, setLessons] = useState([]);
   const [editingLesson, setEditingLesson] = useState(null);
-  const [newLesson, setNewLesson] = useState({ 
-    id: '', title: '', video_id: '', markdown_url: '', meeting_url: '', meeting_time: '', order_index: 0 
+  const [newLesson, setNewLesson] = useState({
+    id: '', title: '', video_id: '', markdown_url: '', meeting_url: '', meeting_time: '', order_index: 0
   });
 
   // Estados para Estudiantes
   const [students, setStudents] = useState([]);
-  // NUEVO: Estado para el filtro de horarios
   const [selectedSchedule, setSelectedSchedule] = useState('all');
 
   useEffect(() => {
@@ -42,26 +41,26 @@ export default function TeacherPanel() {
       .from('courses')
       .select('*')
       .eq('teacher_id', user.id);
-    
+
     setMyCourses(data || []);
     setLoading(false);
   };
 
   const loadCourseData = async (course) => {
     setSelectedCourse(course);
-    setSelectedSchedule('all'); // NUEVO: Resetear el filtro al cambiar de curso
-    
+    setSelectedSchedule('all');
+
     // Traer lecciones
     const { data: lessonsData } = await supabase
       .from('lessons')
       .select('*')
       .eq('course_id', course.id)
       .order('order_index', { ascending: true });
-    
+
     setLessons(lessonsData || []);
     setNewLesson(prev => ({ ...prev, order_index: (lessonsData?.length || 0) + 1 }));
 
-    // Traer estudiantes inscritos cruzando datos con perfiles
+    // Traer estudiantes inscritos
     const { data: enrollmentsData, error } = await supabase
       .from('course_enrollments')
       .select(`
@@ -69,7 +68,7 @@ export default function TeacherPanel() {
         profiles ( full_name, email )
       `)
       .eq('course_id', course.id);
-    
+
     if (error) console.error("Error cargando estudiantes:", error);
     setStudents(enrollmentsData || []);
   };
@@ -77,8 +76,7 @@ export default function TeacherPanel() {
   // --- GESTIÓN DE SESIONES ---
   const handleSaveLesson = async (e) => {
     e.preventDefault();
-    
-    // Formatear la fecha para Supabase si existe
+
     const formattedTime = newLesson.meeting_time ? new Date(newLesson.meeting_time).toISOString() : null;
 
     if (editingLesson) {
@@ -122,7 +120,6 @@ export default function TeacherPanel() {
 
   const startEditLesson = (lesson) => {
     setEditingLesson(true);
-    // Convertir ISO de Supabase al formato que lee <input type="datetime-local">
     let localTime = '';
     if (lesson.meeting_time) {
       const d = new Date(lesson.meeting_time);
@@ -141,10 +138,9 @@ export default function TeacherPanel() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // NUEVO: Lógica dinámica de filtrado
   const uniqueSchedules = [...new Set(students.map(s => s.schedule_text))].filter(Boolean);
-  const filteredStudents = selectedSchedule === 'all' 
-    ? students 
+  const filteredStudents = selectedSchedule === 'all'
+    ? students
     : students.filter(s => s.schedule_text === selectedSchedule);
 
   if (loading) return <div className="text-white p-10 font-bold animate-pulse">Cargando Panel de Profesor...</div>;
@@ -157,7 +153,6 @@ export default function TeacherPanel() {
       </h1>
 
       {!selectedCourse ? (
-        // VISTA 1: Elegir Curso
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-gray-400">Mis Cursos Asignados</h2>
           {myCourses.length === 0 ? (
@@ -179,18 +174,16 @@ export default function TeacherPanel() {
           )}
         </div>
       ) : (
-        // VISTA 2: Gestionar el Curso Elegido
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
           <button onClick={() => setSelectedCourse(null)} className="text-gray-400 hover:text-white text-sm flex items-center gap-2">
             &larr; Volver a mis cursos
           </button>
-          
+
           <div>
             <h2 className="text-3xl font-bold text-white mb-1">{selectedCourse.title}</h2>
             <p className="text-gray-500">Gestión de sesiones y alumnado</p>
           </div>
 
-          {/* TABS DEL CURSO */}
           <div className="flex gap-4 border-b border-gray-800 mb-6">
             <button onClick={() => setActiveTab('sessions')} className={`pb-4 px-2 font-medium transition-colors ${activeTab === 'sessions' ? 'border-b-2 border-purple-500 text-purple-400' : 'text-gray-500'}`}>
               Sesiones Sincrónicas
@@ -200,56 +193,57 @@ export default function TeacherPanel() {
             </button>
           </div>
 
-          {/* TAB: SESIONES */}
           {activeTab === 'sessions' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Formulario Agregar/Editar */}
               <form onSubmit={handleSaveLesson} className={`p-6 rounded-2xl border flex flex-col gap-4 h-fit sticky top-24 transition-colors ${editingLesson ? 'bg-purple-900/10 border-purple-500/50' : 'bg-gray-900/50 border-gray-800'}`}>
                 <h3 className="text-white font-bold mb-2">{editingLesson ? '📝 Reprogramar Sesión' : '➕ Nueva Sesión Sincrónica'}</h3>
-                
-                <input 
-                  placeholder="ID de lección (ej: clase-1)" 
+
+                <input
+                  placeholder="ID de lección (ej: clase-1)"
                   className={`bg-black border border-gray-700 p-2.5 rounded text-white text-sm ${editingLesson ? 'opacity-50' : ''}`}
-                  value={newLesson.id} onChange={e => !editingLesson && setNewLesson({...newLesson, id: e.target.value})}
+                  value={newLesson.id} onChange={e => !editingLesson && setNewLesson({ ...newLesson, id: e.target.value })}
                   required disabled={editingLesson}
                 />
-                <input 
-                  placeholder="Título de la clase" 
+                <input
+                  placeholder="Título de la clase"
                   className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm"
-                  value={newLesson.title} onChange={e => setNewLesson({...newLesson, title: e.target.value})}
+                  value={newLesson.title} onChange={e => setNewLesson({ ...newLesson, title: e.target.value })}
                   required
                 />
-                <input 
-                  placeholder="YouTube Video ID (Grabación opcional)" 
+                <input
+                  placeholder="YouTube Video ID (Grabación opcional)"
                   className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm"
-                  value={newLesson.video_id} onChange={e => setNewLesson({...newLesson, video_id: e.target.value})}
+                  value={newLesson.video_id} onChange={e => setNewLesson({ ...newLesson, video_id: e.target.value })}
                 />
-                <input 
-                  placeholder="URL Markdown (Material opcional)" 
+                <input
+                  placeholder="URL Markdown (Material opcional)"
                   className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm"
-                  value={newLesson.markdown_url} onChange={e => setNewLesson({...newLesson, markdown_url: e.target.value})}
+                  value={newLesson.markdown_url} onChange={e => setNewLesson({ ...newLesson, markdown_url: e.target.value })}
                 />
-                
-                <div className="pt-2 border-t border-gray-800 mt-2">
-                  <label className="text-xs text-gray-500 font-bold uppercase">Sesión en Vivo</label>
-                  <input 
-                    placeholder="Enlace de la reunión (Zoom/Meet)" 
-                    className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm w-full mt-2"
-                    value={newLesson.meeting_url} onChange={e => setNewLesson({...newLesson, meeting_url: e.target.value})}
-                  />
-                  <input 
-                    type="datetime-local"
-                    className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm w-full mt-2"
-                    value={newLesson.meeting_time} onChange={e => setNewLesson({...newLesson, meeting_time: e.target.value})}
-                  />
-                </div>
-                
-                <input 
-                  type="number" placeholder="Orden" 
+
+                {/* CORRECCIÓN: Renderizado condicional de Sesión en Vivo */}
+                {selectedCourse?.is_synchronous && (
+                  <div className="pt-2 border-t border-gray-800 mt-2">
+                    <label className="text-xs text-gray-500 font-bold uppercase">Sesión en Vivo</label>
+                    <input
+                      placeholder="Enlace de la reunión (Zoom/Meet)"
+                      className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm w-full mt-2"
+                      value={newLesson.meeting_url} onChange={e => setNewLesson({ ...newLesson, meeting_url: e.target.value })}
+                    />
+                    <input
+                      type="datetime-local"
+                      className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm w-full mt-2"
+                      value={newLesson.meeting_time} onChange={e => setNewLesson({ ...newLesson, meeting_time: e.target.value })}
+                    />
+                  </div>
+                )}
+
+                <input
+                  type="number" placeholder="Orden"
                   className="bg-black border border-gray-700 p-2.5 rounded text-white text-sm mt-2"
-                  value={newLesson.order_index} onChange={e => setNewLesson({...newLesson, order_index: parseInt(e.target.value)})}
+                  value={newLesson.order_index} onChange={e => setNewLesson({ ...newLesson, order_index: parseInt(e.target.value) })}
                 />
-                
+
                 <div className="flex flex-col gap-2 mt-2">
                   <button className={`font-bold py-2 rounded-lg transition-colors text-white ${editingLesson ? 'bg-purple-600 hover:bg-purple-500' : 'bg-green-600 hover:bg-green-500'}`}>
                     {editingLesson ? 'Guardar Cambios' : 'Guardar Sesión'}
@@ -262,7 +256,6 @@ export default function TeacherPanel() {
                 </div>
               </form>
 
-              {/* Lista de Sesiones Programadas */}
               <div className="lg:col-span-2 space-y-3">
                 {lessons.map((lesson) => (
                   <div key={lesson.id} className="bg-black border border-gray-800 p-4 rounded-xl flex items-center justify-between group">
@@ -270,12 +263,16 @@ export default function TeacherPanel() {
                       <span className="text-purple-500 font-bold">#{lesson.order_index}</span>
                       <div>
                         <h5 className="text-white font-medium">{lesson.title}</h5>
-                        {lesson.meeting_time ? (
-                          <p className="text-[11px] text-orange-400 font-bold uppercase mt-1">
-                            📅 {new Date(lesson.meeting_time).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
-                          </p>
+
+                        {/* CORRECCIÓN: Lógica dinámica de etiquetas */}
+                        {selectedCourse?.is_synchronous ? (
+                          lesson.meeting_time && (
+                            <p className="text-[11px] text-orange-400 font-bold uppercase mt-1">
+                              📅 {new Date(lesson.meeting_time).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </p>
+                          )
                         ) : (
-                          <p className="text-[11px] text-gray-500 font-bold uppercase mt-1">Sin horario definido</p>
+                          <p className="text-[11px] text-purple-400 font-bold uppercase mt-1">Pre-grabado</p>
                         )}
                       </div>
                     </div>
@@ -290,11 +287,8 @@ export default function TeacherPanel() {
             </div>
           )}
 
-          {/* TAB: ESTUDIANTES */}
           {activeTab === 'students' && (
             <div className="bg-black border border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-              
-              {/* NUEVO: Cabecera con Filtro */}
               <div className="p-4 bg-gray-900 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h3 className="text-white font-bold">
                   Total mostrados: <span className="text-purple-400">{filteredStudents.length}</span>
@@ -303,7 +297,7 @@ export default function TeacherPanel() {
                 {uniqueSchedules.length > 0 && (
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Grupo:</span>
-                    <select 
+                    <select
                       className="bg-black border border-gray-700 text-sm text-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-purple-500 outline-none w-full sm:w-auto"
                       value={selectedSchedule}
                       onChange={(e) => setSelectedSchedule(e.target.value)}
@@ -327,7 +321,6 @@ export default function TeacherPanel() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800">
-                    {/* Iteramos sobre los estudiantes ya filtrados */}
                     {filteredStudents.map((student, idx) => (
                       <tr key={idx} className="hover:bg-gray-900/30 transition-colors">
                         <td className="p-4 font-medium text-white">{student.profiles?.full_name || 'Desconocido'}</td>
